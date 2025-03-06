@@ -25,7 +25,7 @@ This userscript enhances the functionality of the 1337x.to torrent site by addin
 ## Preview
 Below is a preview of the userscript in action:
 
-![Preview](https://raw.githubusercontent.com/neokyuubi/1337x/main/preview.jpg)
+![Preview](/preview.jpg)
 
 ## Contributing
 Contributions to this project are welcome. Please fork the repository and submit a pull request with your enhancements.
