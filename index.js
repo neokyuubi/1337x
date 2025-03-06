@@ -9,43 +9,6 @@
 // @match        *://www.1337x.to/search/*
 // @namespace    https://github.com/neokyuubi/1337x-Magnet-Link-Fetcher
 // @icon         https://1337x.to/favicon.ico
-// @description  <h1>1337x Magnet Link Fetcher</h1>
-// <h2>Overview</h2>
-// <p>This userscript enhances the functionality of the <a href="https://1337x.to">1337x.to</a> torrent site by adding checkboxes and a feature to extract magnet links directly from the search results. It simplifies the process of managing and downloading torrents by allowing users to select multiple torrents and fetch or copy their magnet links with ease.</p>
-// <h2>Features</h2>
-// <ul>
-//   <li><strong>Checkbox Selection</strong>: Users can select multiple torrents using checkboxes.</li>
-//   <li><strong>Shift-Click Selection</strong>: Allows range selection of checkboxes using the Shift key.</li>
-//   <li><strong>Fetch Magnet Links</strong>: Retrieves magnet links for selected torrents.</li>
-//   <li><strong>Copy Magnet Links</strong>: Allows copying of all fetched magnet links with a single click.</li>
-//   <li><strong>Dynamic UI Updates</strong>: Provides real-time feedback on the status of magnet link fetching and copying.</li>
-// </ul>
-// <h2>Installation</h2>
-// <ol>
-//   <li>Install Tampermonkey or a similar userscript manager in your browser.</li>
-//   <li>Create a new userscript and copy the contents of <code>index.js</code> into the script editor.</li>
-//   <li>Save the script and ensure it's enabled.</li>
-//   <li>Navigate to <a href="https://1337x.to">1337x.to</a> and the script will automatically enhance the search results page.</li>
-// </ol>
-// <h2>Usage</h2>
-// <ul>
-//   <li>Perform a search on <a href="https://1337x.to">1337x.to</a>.</li>
-//   <li>Use the checkboxes to select the torrents for which you want to fetch or copy magnet links.</li>
-//   <li>Click the "Fetch Selected Links" button to retrieve the magnet links.</li>
-//   <li>Once fetched, click "Copy All Links" to copy the desired magnet links to the clipboard.</li>
-// </ul>
-// <h2>Preview</h2>
-// <p>Below is a preview of the userscript in action:</p>
-// <img src="https://raw.githubusercontent.com/neokyuubi/1337x/main/preview.jpg" alt="Preview">
-// <h2>Contributing</h2>
-// <p>Contributions to this project are welcome. Please fork the repository and submit a pull request with your enhancements.</p>
-// <h2>License</h2>
-// <p>This project is licensed under the MIT License - see the LICENSE file for details.</p>
-// <h2>Acknowledgments</h2>
-// <ul>
-//   <li>Thanks to the developers of Tampermonkey for providing the platform to run userscripts.</li>
-//   <li>This script is developed for educational purposes and personal use. Please respect copyright laws and the terms of service of 1337x.to.</li>
-// </ul>
 // @grant        GM_xmlhttpRequest
 // @run-at       document-end
 // ==/UserScript==
