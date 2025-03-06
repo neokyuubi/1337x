@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         1337x Magnet Link Fetcher
-// @namespace    http://tampermonkey.net/
 // @version      1.0
 // @description  Adds checkboxes and magnet link extraction functionality to 1337x.to search results
 // @author       neokyuubi
 // @match        *://1337x.to/*
 // @match        *://www.1337x.to/search/*
+// @namespace    https://github.com/neokyuubi/1337x-Magnet-Link-Fetcher
 // @icon         https://1337x.to/favicon.ico
 // @grant        GM_xmlhttpRequest
 // @run-at       document-end
