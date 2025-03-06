@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         1337x Magnet Link Fetcher
-// @version      1.4
+// @version      1.5
 // @description  Adds checkboxes and magnet link extraction functionality to 1337x.to search results
 // @updateURL    https://raw.githubusercontent.com/neokyuubi/1337x/refs/heads/main/index.js
 // @downloadURL  https://raw.githubusercontent.com/neokyuubi/1337x/refs/heads/main/index.js
@@ -10,7 +10,7 @@
 // @namespace    https://github.com/neokyuubi/1337x-Magnet-Link-Fetcher
 // @icon         https://1337x.to/favicon.ico
 // @description  <h1>1337x Magnet Link Fetcher</h1>
-// <h2>Overview</h2>
+// <h2>Overview:</h2>
 // <p>This userscript enhances the functionality of the <a href="https://1337x.to">1337x.to</a> torrent site by adding checkboxes and a feature to extract magnet links directly from the search results. It simplifies the process of managing and downloading torrents by allowing users to select multiple torrents and fetch or copy their magnet links with ease.</p>
 // <h2>Features</h2>
 // <ul>
