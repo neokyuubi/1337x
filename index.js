@@ -27,16 +27,8 @@
     let shiftPressed = false;
 
     // Track shift key state
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Shift') {
-            shiftPressed = true;
-        }
-    });
-
-    document.addEventListener('keyup', function(e) {
-        if (e.key === 'Shift') {
-            shiftPressed = false;
-        }
+    document.addEventListener('mousemove', function(e) {
+        shiftPressed = event.shiftKey;
     });
 
     // Add CSS for new elements
