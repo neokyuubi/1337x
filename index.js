@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         1337x Magnet Link Fetcher
-// @version      1.8
+// @version      1.9
 // @description  Adds checkboxes and magnet link extraction functionality to 1337x.to search results
 // @updateURL    https://raw.githubusercontent.com/neokyuubi/1337x/main/index.js
 // @downloadURL  https://raw.githubusercontent.com/neokyuubi/1337x/main/index.js
