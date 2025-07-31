@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         1337x Magnet Link Fetcher
-// @version      1.8
+// @version      1.9
 // @description  Adds checkboxes and magnet link extraction functionality to 1337x.to search results
 // @updateURL    https://raw.githubusercontent.com/neokyuubi/1337x/main/index.js
 // @downloadURL  https://raw.githubusercontent.com/neokyuubi/1337x/main/index.js
 // @author       neokyuubi
-// @match        *://1337x.to/search/*
-// @match        *://www.1337x.to/search/*
+// @match        *://1337x.to/*
+// @match        *://www.1337x.to/*
 // @namespace    https://github.com/neokyuubi/1337x-Magnet-Link-Fetcher
 // @icon         https://1337x.to/favicon.ico
 // @grant        GM_xmlhttpRequest
@@ -17,8 +17,16 @@
 (function() {
     'use strict';
 
-    // Only run on search pages
-    if (!window.location.href.includes('/search/') && !window.location.href.includes('/category/') && !window.location.href.includes('/popular/') && !window.location.href.includes('/top-100')) {
+    // Only run on search and listing pages
+    if (!window.location.href.includes('/search/') && 
+        !window.location.href.includes('/category/') && 
+        !window.location.href.includes('/category-search/') && 
+        !window.location.href.includes('/popular/') && 
+        !window.location.href.includes('/top-100') && 
+        !window.location.href.includes('/sort-search/') && 
+        !window.location.href.includes('/trending') && 
+        !window.location.href.includes('/movie-library/') && 
+        !window.location.href.includes('/cat/')) {
         return;
     }
 
@@ -82,12 +90,16 @@
     `;
     document.head.appendChild(style);
 
-    // Find the table containing search results
-    const table = document.querySelector('.table-list') || document.querySelector('table.table-list');
+    // Find the table containing search results - improved selector
+    const table = document.querySelector('table.table-list') || 
+                  document.querySelector('.table-list') || 
+                  document.querySelector('table.table.table-responsive.table-striped');
     if (!table) return;
 
     // Add header columns for checkbox and magnet
     const headerRow = table.querySelector('thead tr');
+    if (!headerRow) return; // Safety check
+    
     const checkboxHeader = document.createElement('th');
     checkboxHeader.className = 'checkbox-column';
     checkboxHeader.textContent = '';
@@ -137,7 +149,10 @@
         // Add magnet column
         const magnetCell = document.createElement('td');
         magnetCell.className = 'magnet-column';
-        magnetCell.dataset.torrentUrl = row.querySelector('a[href^="/torrent/"]').href;
+        const torrentLink = row.querySelector('a[href^="/torrent/"]');
+        if (torrentLink) {
+            magnetCell.dataset.torrentUrl = torrentLink.href;
+        }
         row.appendChild(magnetCell);
     });
 
@@ -181,6 +196,14 @@
 
             // Skip if we already fetched this link
             if (magnetCell.innerHTML !== '') {
+                completedRequests++;
+                updateFetchButtonStatus(completedRequests, totalRequests);
+                return;
+            }
+
+            // Skip if no torrent URL found
+            if (!torrentUrl) {
+                magnetCell.textContent = 'No URL';
                 completedRequests++;
                 updateFetchButtonStatus(completedRequests, totalRequests);
                 return;
