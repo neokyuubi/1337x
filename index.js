@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         1337x Magnet Link Fetcher
-// @version      2.0
+// @version      2.1
 // @description  Adds checkboxes and magnet link extraction functionality to 1337x.to search results. Handles new site structure.
 // @updateURL    https://raw.githubusercontent.com/neokyuubi/1337x/main/index.js
 // @downloadURL  https://raw.githubusercontent.com/neokyuubi/1337x/main/index.js
@@ -217,27 +217,42 @@
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(response.responseText, 'text/html');
 
+                    console.log(`[FetcherDebug] Extracted Title: "${doc.title.trim()}" for ${torrentUrl}`);
+                    console.log(`[FetcherDebug] Response Length: ${response.responseText.length}`);
+
+                    // Check for Cloudflare/Protection
+                    if (doc.title.includes("Just a moment") || doc.title.includes("Attention Required") || doc.title.includes("Security Challenge")) {
+                         console.error(`[FetcherDebug] Blocked by Cloudflare/Anti-bot for ${torrentUrl}`);
+                         magnetCell.textContent = 'Bot Block';
+                         magnetCell.title = "Cloudflare blocked the background request. Try opening the page manually.";
+                         completedRequests++;
+                         updateFetchButtonStatus(completedRequests, totalRequests);
+                         return;
+                    }
+
                     // Attempt 1: Standard selector
                     let magnetLink = doc.querySelector('a[href^="magnet:"]');
                     let magnetUrl = magnetLink ? magnetLink.href : null;
 
-                    // Attempt 2: Search deeper if not found (structure changes)
+                    // Attempt 2: Fuzzy search for magnet: in href
                     if (!magnetUrl) {
-                        // Look for any anchor tag whose href includes 'magnet:'
-                        // Note: Using a selector for href containing 'magnet:'
                         const fuzzyLink = doc.querySelector('a[href*="magnet:"]');
                         if (fuzzyLink) {
                             magnetUrl = fuzzyLink.href;
-                        } else {
-                             // Last resort: iterate all links
-                             const allLinks = doc.querySelectorAll('a');
-                             for (let i = 0; i < allLinks.length; i++) {
-                                 if (allLinks[i].href && allLinks[i].href.startsWith('magnet:')) {
-                                     magnetUrl = allLinks[i].href;
-                                     break;
-                                 }
-                             }
+                            console.log(`[FetcherDebug] Found via fuzzy search for ${torrentUrl}`);
                         }
+                    }
+
+                    // Attempt 3: Loop all links (Brute force)
+                    if (!magnetUrl) {
+                         const allLinks = doc.querySelectorAll('a');
+                         for (let i = 0; i < allLinks.length; i++) {
+                             if (allLinks[i].href && allLinks[i].href.includes('magnet:?')) {
+                                 magnetUrl = allLinks[i].href;
+                                 console.log(`[FetcherDebug] Found via brute force loop for ${torrentUrl}`);
+                                 break;
+                             }
+                         }
                     }
 
                     if (magnetUrl) {
@@ -261,7 +276,9 @@
                         magnetCell.innerHTML = '';
                         magnetCell.appendChild(copyLink);
                     } else {
-                        console.warn(`Magnet link not found for ${torrentUrl}`);
+                        console.warn(`[FetcherDebug] Magnet link REALLY not found for ${torrentUrl}`);
+                        // Log a snippet of the body to see what we got
+                        console.log(`[FetcherDebug] Body content snippet: ${doc.body.innerText.substring(0, 200).replace(/\n/g, ' ')}`);
                         magnetCell.textContent = 'Not found';
                     }
 
@@ -269,7 +286,7 @@
                     updateFetchButtonStatus(completedRequests, totalRequests);
                 },
                 onerror: function(err) {
-                    console.error('Error fetching ' + torrentUrl, err);
+                    console.error('[FetcherDebug] Network Error fetching ' + torrentUrl, err);
                     magnetCell.textContent = 'Error';
                     completedRequests++;
                     updateFetchButtonStatus(completedRequests, totalRequests);
