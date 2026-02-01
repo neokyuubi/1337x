@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         1337x Magnet Link Fetcher
-// @version      1.9
-// @description  Adds checkboxes and magnet link extraction functionality to 1337x.to search results
+// @version      2.0
+// @description  Adds checkboxes and magnet link extraction functionality to 1337x.to search results. Handles new site structure.
 // @updateURL    https://raw.githubusercontent.com/neokyuubi/1337x/main/index.js
 // @downloadURL  https://raw.githubusercontent.com/neokyuubi/1337x/main/index.js
 // @author       neokyuubi
@@ -217,11 +217,30 @@
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(response.responseText, 'text/html');
 
-                    // Extract magnet link
-                    const magnetLink = doc.querySelector('a[href^="magnet:"]');
-                    if (magnetLink) {
-                        const magnetUrl = magnetLink.href;
+                    // Attempt 1: Standard selector
+                    let magnetLink = doc.querySelector('a[href^="magnet:"]');
+                    let magnetUrl = magnetLink ? magnetLink.href : null;
 
+                    // Attempt 2: Search deeper if not found (structure changes)
+                    if (!magnetUrl) {
+                        // Look for any anchor tag whose href includes 'magnet:'
+                        // Note: Using a selector for href containing 'magnet:'
+                        const fuzzyLink = doc.querySelector('a[href*="magnet:"]');
+                        if (fuzzyLink) {
+                            magnetUrl = fuzzyLink.href;
+                        } else {
+                             // Last resort: iterate all links
+                             const allLinks = doc.querySelectorAll('a');
+                             for (let i = 0; i < allLinks.length; i++) {
+                                 if (allLinks[i].href && allLinks[i].href.startsWith('magnet:')) {
+                                     magnetUrl = allLinks[i].href;
+                                     break;
+                                 }
+                             }
+                        }
+                    }
+
+                    if (magnetUrl) {
                         // Create copy button for the magnet link
                         const copyLink = document.createElement('span');
                         copyLink.className = 'magnet-link';
@@ -242,13 +261,15 @@
                         magnetCell.innerHTML = '';
                         magnetCell.appendChild(copyLink);
                     } else {
+                        console.warn(`Magnet link not found for ${torrentUrl}`);
                         magnetCell.textContent = 'Not found';
                     }
 
                     completedRequests++;
                     updateFetchButtonStatus(completedRequests, totalRequests);
                 },
-                onerror: function() {
+                onerror: function(err) {
+                    console.error('Error fetching ' + torrentUrl, err);
                     magnetCell.textContent = 'Error';
                     completedRequests++;
                     updateFetchButtonStatus(completedRequests, totalRequests);
