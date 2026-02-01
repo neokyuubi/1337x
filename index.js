@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         1337x Magnet Link Fetcher
-// @version      2.1
+// @version      2.2
 // @description  Adds checkboxes and magnet link extraction functionality to 1337x.to search results. Handles new site structure.
 // @updateURL    https://raw.githubusercontent.com/neokyuubi/1337x/main/index.js
 // @downloadURL  https://raw.githubusercontent.com/neokyuubi/1337x/main/index.js
@@ -175,88 +175,113 @@
     actionButtons.appendChild(copyAllButton);
     document.body.appendChild(actionButtons);
 
-    // Function to fetch magnet links for selected torrents
+    // Function to fetch magnet links using Hidden Iframes (Bypasses Cloudflare)
     function fetchSelectedMagnetLinks() {
-        const checkedRows = document.querySelectorAll('.checkbox-column input[type="checkbox"]:checked');
+        const checkedRows = Array.from(document.querySelectorAll('.checkbox-column input[type="checkbox"]:checked'));
         if (checkedRows.length === 0) {
             alert('No torrents selected! Please select at least one torrent.');
             return;
         }
 
-        let completedRequests = 0;
-        let totalRequests = checkedRows.length;
-
-        fetchButton.disabled = true;
-        fetchButton.textContent = `Fetching... (0/${totalRequests})`;
-
-        checkedRows.forEach(checkbox => {
+        // Initialize queue
+        const queue = checkedRows.map(checkbox => {
             const row = checkbox.closest('tr');
             const magnetCell = row.querySelector('.magnet-column');
-            const torrentUrl = magnetCell.dataset.torrentUrl;
+            return {
+                row: row,
+                magnetCell: magnetCell,
+                torrentUrl: magnetCell.dataset.torrentUrl
+            };
+        });
 
-            // Skip if we already fetched this link
-            if (magnetCell.innerHTML !== '') {
-                completedRequests++;
-                updateFetchButtonStatus(completedRequests, totalRequests);
+        fetchButton.disabled = true;
+        copyAllButton.disabled = true;
+        
+        let processedCount = 0;
+        const totalCount = queue.length;
+
+        // Process first item
+        processNextItem();
+
+        function processNextItem() {
+            if (queue.length === 0) {
+                fetchButton.textContent = 'Fetch Selected Links';
+                fetchButton.disabled = false;
+                copyAllButton.disabled = false;
                 return;
             }
 
-            // Skip if no torrent URL found
-            if (!torrentUrl) {
-                magnetCell.textContent = 'No URL';
-                completedRequests++;
-                updateFetchButtonStatus(completedRequests, totalRequests);
+            const item = queue.shift();
+            const { magnetCell, torrentUrl } = item;
+
+            // Skip if already done or invalid
+            if (magnetCell.innerHTML !== '' || !torrentUrl) {
+                processedCount++;
+                updateFetchButtonStatus(processedCount, totalCount);
+                processNextItem();
                 return;
             }
 
-            // Fetch the torrent page
-            GM_xmlhttpRequest({
-                method: 'GET',
-                url: torrentUrl,
-                onload: function(response) {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(response.responseText, 'text/html');
+            updateFetchButtonStatus(processedCount, totalCount);
 
-                    console.log(`[FetcherDebug] Extracted Title: "${doc.title.trim()}" for ${torrentUrl}`);
-                    console.log(`[FetcherDebug] Response Length: ${response.responseText.length}`);
+            // Create hidden iframe
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = torrentUrl;
+            document.body.appendChild(iframe);
 
-                    // Check for Cloudflare/Protection
-                    if (doc.title.includes("Just a moment") || doc.title.includes("Attention Required") || doc.title.includes("Security Challenge")) {
-                         console.error(`[FetcherDebug] Blocked by Cloudflare/Anti-bot for ${torrentUrl}`);
-                         magnetCell.textContent = 'Bot Block';
-                         magnetCell.title = "Cloudflare blocked the background request. Try opening the page manually.";
-                         completedRequests++;
-                         updateFetchButtonStatus(completedRequests, totalRequests);
-                         return;
+            // Set a timeout to kill it if it hangs
+            const timeoutId = setTimeout(() => {
+                console.warn(`[IframeDebug] Timeout waiting for ${torrentUrl}`);
+                magnetCell.textContent = 'Timeout';
+                cleanup();
+            }, 15000); // 15 second timeout
+
+            function cleanup() {
+                clearTimeout(timeoutId);
+                try {
+                    iframe.remove();
+                } catch(e) {}
+                processedCount++;
+                updateFetchButtonStatus(processedCount, totalCount);
+                // Wait a small random delay before next request to be human-like
+                setTimeout(processNextItem, 500 + Math.random() * 500);
+            }
+
+            iframe.onload = function() {
+                try {
+                    const doc = iframe.contentDocument || iframe.contentWindow.document;
+                    
+                    // Check for Cloudflare challenge in iframe
+                    if (doc.title.includes("Just a moment") || doc.title.includes("Attention Required")) {
+                         console.log(`[IframeDebug] Cloudflare challenge detected in iframe for ${torrentUrl}. Waiting...`);
+                         // Do not cleanup yet, let it reload itself if it solves headers. 
+                         // But for now, we just let the timeout handle it if it gets stuck.
+                         return; 
                     }
 
                     // Attempt 1: Standard selector
                     let magnetLink = doc.querySelector('a[href^="magnet:"]');
                     let magnetUrl = magnetLink ? magnetLink.href : null;
 
-                    // Attempt 2: Fuzzy search for magnet: in href
+                    // Attempt 2: Fuzzy
                     if (!magnetUrl) {
                         const fuzzyLink = doc.querySelector('a[href*="magnet:"]');
-                        if (fuzzyLink) {
-                            magnetUrl = fuzzyLink.href;
-                            console.log(`[FetcherDebug] Found via fuzzy search for ${torrentUrl}`);
+                        if (fuzzyLink) magnetUrl = fuzzyLink.href;
+                    }
+
+                    // Attempt 3: Loop
+                    if (!magnetUrl) {
+                        const allLinks = doc.querySelectorAll('a');
+                        for (let i = 0; i < allLinks.length; i++) {
+                            if (allLinks[i].href && allLinks[i].href.includes('magnet:?')) {
+                                magnetUrl = allLinks[i].href;
+                                break;
+                            }
                         }
                     }
 
-                    // Attempt 3: Loop all links (Brute force)
-                    if (!magnetUrl) {
-                         const allLinks = doc.querySelectorAll('a');
-                         for (let i = 0; i < allLinks.length; i++) {
-                             if (allLinks[i].href && allLinks[i].href.includes('magnet:?')) {
-                                 magnetUrl = allLinks[i].href;
-                                 console.log(`[FetcherDebug] Found via brute force loop for ${torrentUrl}`);
-                                 break;
-                             }
-                         }
-                    }
-
                     if (magnetUrl) {
-                        // Create copy button for the magnet link
                         const copyLink = document.createElement('span');
                         copyLink.className = 'magnet-link';
                         copyLink.textContent = 'Copy';
@@ -272,27 +297,26 @@
                                 }, 1000);
                             });
                         };
-
                         magnetCell.innerHTML = '';
                         magnetCell.appendChild(copyLink);
+                        cleanup(); // Success!
                     } else {
-                        console.warn(`[FetcherDebug] Magnet link REALLY not found for ${torrentUrl}`);
-                        // Log a snippet of the body to see what we got
-                        console.log(`[FetcherDebug] Body content snippet: ${doc.body.innerText.substring(0, 200).replace(/\n/g, ' ')}`);
-                        magnetCell.textContent = 'Not found';
+                         // If we are here, page loaded but no magnet found. 
+                         // Could be we need to wait for JS?
+                         // Let's retry once after 2 seconds if not found?
+                         // For simplicity, just mark fail.
+                         console.warn(`[IframeDebug] No magnet found in iframe for ${torrentUrl}`);
+                         magnetCell.textContent = 'Not found';
+                         cleanup();
                     }
 
-                    completedRequests++;
-                    updateFetchButtonStatus(completedRequests, totalRequests);
-                },
-                onerror: function(err) {
-                    console.error('[FetcherDebug] Network Error fetching ' + torrentUrl, err);
-                    magnetCell.textContent = 'Error';
-                    completedRequests++;
-                    updateFetchButtonStatus(completedRequests, totalRequests);
+                } catch (err) {
+                    console.error(`[IframeDebug] Error accessing iframe content (CORS?): ${err}`);
+                    magnetCell.textContent = 'Access Denied';
+                    cleanup();
                 }
-            });
-        });
+            };
+        }
     }
 
     // Update fetch button status
