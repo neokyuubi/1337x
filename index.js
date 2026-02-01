@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         1337x Magnet Link Fetcher
-// @version      2.3
-// @description  Adds checkboxes and magnet link extraction functionality to 1337x.to search results. Handles new site structure.
+// @version      2.4
+// @description  Adds checkboxes and magnet link extraction functionality to 1337x.to search results.
 // @updateURL    https://raw.githubusercontent.com/neokyuubi/1337x/main/index.js
 // @downloadURL  https://raw.githubusercontent.com/neokyuubi/1337x/main/index.js
 // @author       neokyuubi
@@ -9,10 +9,9 @@
 // @match        *://www.1337x.to/*
 // @namespace    https://github.com/neokyuubi/1337x-Magnet-Link-Fetcher
 // @icon         https://1337x.to/favicon.ico
-// @grant        GM_xmlhttpRequest
+// @grant        none
 // @run-at       document-end
 // ==/UserScript==
-
 
 
 (function() {
@@ -20,56 +19,8 @@
 
     // --- CONFIGURATION ---
     const SEARCH_PAGE_REGEX = /(\/search\/|\/category\/|\/category-search\/|\/popular\/|\/top-100|\/sort-search\/|\/trending|\/movie-library\/|\/cat\/)/;
-    const TORRENT_PAGE_REGEX = /\/torrent\//;
 
-    // --- SLAVE MODE: TORRENT PAGE ---
-    // If we are on a torrent page AND we were opened by a script (window.name starts with "fetcher_"), do the work and close.
-    if (TORRENT_PAGE_REGEX.test(window.location.href) && window.name.startsWith('1337x_fetcher_')) {
-        console.log("Fetcher Slave Active");
-        
-        // Wait for content (in case of cloudflare, it might reload automatically. 
-        // We set a slightly longer delay or check for magnet immediately if ready)
-        function extractAndClose() {
-             // Check for Cloudflare title
-             if (document.title.includes("Just a moment") || document.title.includes("Attention Required")) {
-                 console.log("Cloudflare detected, waiting...");
-                 setTimeout(extractAndClose, 1000); // Retry in 1s
-                 return;
-             }
-
-             // Attempt magnet extraction
-             let magnetUrl = null;
-             
-             // 1. Standard
-             let magnetLink = document.querySelector('a[href^="magnet:"]');
-             if (magnetLink) magnetUrl = magnetLink.href;
-
-             // 2. Fuzzy
-             if (!magnetUrl) {
-                 const fuzzy = document.querySelector('a[href*="magnet:"]');
-                 if (fuzzy) magnetUrl = fuzzy.href;
-             }
-
-             // Send result back to opener
-             if (window.opener) {
-                 window.opener.postMessage({
-                     type: 'MAGNET_RESULT',
-                     windowName: window.name,
-                     magnetUrl: magnetUrl,
-                     status: magnetUrl ? 'success' : 'not-found'
-                 }, '*');
-             }
-
-             // Close self
-             window.close();
-        }
-
-        // Run after decent delay to allow cloudflare pass
-        setTimeout(extractAndClose, 500); 
-        return; 
-    }
-
-    // --- MASTER MODE: SEARCH/LIST PAGE ---
+    // Only run on search and listing pages
     if (!SEARCH_PAGE_REGEX.test(window.location.href)) {
         return;
     }
@@ -259,7 +210,6 @@
 
                     // Check for Cloudflare challenge in doc
                     if (doc.title.includes("Just a moment") || doc.title.includes("Attention Required")) {
-                         console.warn(`[FetcherDebug] Cloudflare detected for ${item.torrentUrl}`);
                          item.magnetCell.textContent = 'Blocked';
                          item.magnetCell.title = "Cloudflare denied the background fetch.";
                          return; 
@@ -309,7 +259,6 @@
                     }
                 })
                 .catch(err => {
-                    console.error('Fetch error:', err);
                     item.magnetCell.textContent = 'Error';
                 })
                 .finally(() => {
